@@ -2,7 +2,10 @@ index.ts
 README.md
 node_modules
 test
+.travis.yml
 tsconfig.json
 jsconfig.json
 coverage
 .nyc_output
+!index.js
+!index.d.ts
