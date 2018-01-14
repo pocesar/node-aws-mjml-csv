@@ -1,6 +1,6 @@
 {
   "name": "aws-mjml-csv",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "CLI and programatic API to send emails using MJML (that is then parsed by Handlebars.js), populating your email passing the CSV columns to your template",
   "main": "index.js",
   "bin": {
