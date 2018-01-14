@@ -1,0 +1,10 @@
+language: node_js
+before_install:
+  - npm i npm@4 -g --progress=false
+script: npm run coverage
+after_success:
+  - cat ./coverage/lcov.info | coveralls
+node_js:
+  - "9"
+  - "8"
+  - "6"

@@ -1,0 +1,113 @@
+#!/usr/bin/env node
+'use strict'
+
+const yargs = require('yargs')
+const SendEmail = require('../index').SendEmail
+const obj = require('through2').obj
+const util = require('util')
+
+yargs
+  .option('encoding', {
+    alias: 'e',
+    type: 'string',
+    default: 'utf-8',
+    desc: 'Encoding'
+  })
+  .option('level', {
+    alias: 'l',
+    type: 'string',
+    choices: ['skip','soft','strict'],
+    default: 'strict',
+    desc: 'Sets the level of MJML'
+  })
+  .option('return-path', {
+    alias: 'r',
+    type: 'string',
+    desc: 'Set the return-path'
+  })
+  .option('csv', {
+    alias: 'c',
+    type: 'string',
+    require: true,
+    desc: 'Set the path to the CSV file'
+  })
+  .option('subject', {
+    type: 'string',
+    require: true,
+    desc: 'Set the subject, can use Handlebars'
+  })
+  .option('source', {
+    alias: 's',
+    require: true,
+    desc: 'Set the FROM email'
+  })
+  .option('dry-run', {
+    type: 'boolean',
+    desc: 'Output to stdout a sample of an email'
+  })
+  .option('template', {
+    type: 'string',
+    require: true,
+    desc: 'MJML template file'
+  })
+  .command({
+    command: '*',
+    describe: 'Send MJML templates through AWS SES',
+    handler: (args) => {
+      const send = new SendEmail({
+        encoding: args.encoding,
+        level: args.level,
+        returnPath: args['return-path'],
+        source: args.source,
+        subject: args.subject
+      })
+
+      var sent = 0
+      var errors = 0
+
+      send.on('sent', () => {
+        sent++
+      })
+
+      send.on('error', ({ error, row }) => {
+        errors++
+        console.error(row.email + ' => \n\t' + error.code + '(' + error.statusCode + ') \n\t' + error.message + ' \n\tid: ' + error.requestId)
+      })
+
+      Promise.all([
+        send.setMjml(args.template),
+        send.setCsvfromPath(args.csv),
+      ])
+      .then(() => {
+        if (args['dry-run']) {
+          return new Promise(function(resolve) {
+            send.parseCSV().pipe(
+              obj(function(row, encoding, callback){
+                resolve(
+                  send.emailOptions({
+                    email: row.email,
+                    vars: { ...row }
+                  })
+                )
+
+                this.emit('end')
+              })
+            )
+          })
+        } else {
+          return send.send()
+        }
+      })
+      .then((result) => {
+        if (args['dry-run']) {
+          console.log(util.inspect(result, false, null))
+        } else {
+          console.log('Sent ' + sent + ' emails (' + errors + ' errored)')
+        }
+      })
+      .catch(console.error.bind(console))
+    }
+  })
+  .example('$0 --source example@example.com --subject "Hello {{ name }}" --csv /path/to/contacts.csv --template /path/to/template.mjml', 'default usage')
+  .showHelpOnFail(true)
+  .argv

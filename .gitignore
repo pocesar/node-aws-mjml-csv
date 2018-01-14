@@ -1,0 +1,7 @@
+node_modules
+index.js
+index.d.ts
+coverage
+.nyc_output
+test/test.d.ts
+test/test.js
